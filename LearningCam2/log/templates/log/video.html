@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">스트레칭 영상</h1>
+</div>
+
+<div class="row">
+
+    {% for motion in motion_list %}
+    <div class="col">
+        <h4>{{ motion.name }}</h4>
+        <ul class="list-group list-group-flush">
+            {% for video in motion.video_set.all %}
+                <li class="list-group-item"><a href="{% url 'log:video-detail' video.id %}">{{ video.name }}</a></li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

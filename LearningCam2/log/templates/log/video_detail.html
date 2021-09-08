@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+
+{% block extra_script %}
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
+<script type="text/javascript">
+    window.dataSet = [0, 0, 0];
+    window.uploadDataSet = [0, 0, 0];
+
+    // More API functions here:
+    // https://github.com/googlecreativelab/teachablemachine-community/tree/master/libraries/image
+
+    // the link to your model provided by Teachable Machine export panel
+    const URL = "{% url 'log:video-detail' video.id %}/model/";
+
+    let model, webcam, maxPredictions, isPlay = false;
+
+    // Load the image model and setup the webcam
+    async function init() {
+        isPlay = true;
+
+        const modelURL = URL + "model.json";
+        const metadataURL = URL + "metadata.json";
+
+        // load the model and metadata
+        // Refer to tmImage.loadFromFiles() in the API to support files from a file picker
+        // or files from your local hard drive
+        // Note: the pose library adds "tmImage" object to your window (window.tmImage)
+        model = await tmImage.load(modelURL, metadataURL);
+        maxPredictions = model.getTotalClasses();
+
+        // Convenience function to setup a webcam
+        webcam = new tmImage.Webcam(500, 350); // width, height, flip
+        webcam.flip = true; // whether to flip the webcam
+        await webcam.setup(); // request access to the webcam
+        await webcam.play();
+        window.requestAnimationFrame(loop);
+
+        // append elements to the DOM
+        document.getElementById("videoElement").appendChild(webcam.canvas);
+    }
+
+    async function loop() {
+        webcam.update(); // update the webcam frame
+        await predict();
+        if (isPlay) {
+            window.requestAnimationFrame(loop);
+        }
+    }
+
+    // run the webcam image through the image model
+    let lastPredict = -1, count = 0;
+    async function predict() {
+        // predict can take in an image, video or canvas html element
+        const prediction = await model.predict(webcam.canvas);
+        var maxIndex = 0;
+
+        for (let i = 0; i < maxPredictions; i++) {
+            if (prediction[i].probability > prediction[maxIndex].probability) {
+                maxIndex = i;
+            }
+        }
+        if ((lastPredict == 0 && maxIndex == 2)) {
+            increaseCount();
+        }
+        lastPredict = maxIndex;
+    }
+
+    function increaseCount() {
+        count += 1;
+        $("#count").text(count)
+    }
+
+    function onStart() {
+        if (isPlay) {
+            return;
+        }
+        init();
+    }
+
+    function onStop() {
+        isPlay = false;
+        if (webcam) {
+            webcam.stop();
+            webcam.canvas.remove();
+        }
+    }
+
+    let imageIndex = 0;
+    let imageUrl = {{ img_urls | safe }};
+    $(function() {
+        if (imageUrl.length > 0) {
+            $("#helpImg").prop("src", imageUrl[0]);
+        }
+        setInterval(() => {
+            $("#helpImg").prop("src", imageUrl[imageIndex % imageUrl.length]);
+            imageIndex += 1;
+        }, 3000);
+    })
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">스트레칭 영상 - {{ video.name }}</h1>
+</div>
+<div>
+    <div class="row" style="height: 400px">
+        <div class="col col-md-6 float-left">
+            <img id="helpImg" style="max-height: 100%; max-width: 100%">
+        </div>
+        <div class="col col-md-6 float-right">
+            <div id="videoElement"></div>
+            <h5 style="position: absolute; bottom: 0;">동작 횟수 : <span id="count">0</span>회</h5>
+        </div>
+    </div>
+    <div class="row float-right">
+        <div class="col">
+            <div class="btn-toolbar mb-2 mb-md-0">
+                <button class="btn ml-3 btn-lm btn-primary" onclick="javascript:onStart();">측정시작</button>
+                <button class="btn ml-3 btn-lm btn-dark" onclick="javascript:onStop();">측정종료</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

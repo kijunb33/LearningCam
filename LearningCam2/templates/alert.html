@@ -1,0 +1,31 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1">
+    <script>
+			{% if message %}
+			    alert("{{ message }}");
+			{% endif %}
+
+			{% if opener %}
+            var target = window.opener
+            {% else %}
+            var target = window
+            {% endif %}
+			{% if redirect_url %}
+            target.document.location.href = "{{ redirect_url }}";
+            {% elif refresh %}
+            target.location = target.location.href;
+            {% elif back %}
+            target.history.back()
+            {% endif %}
+            window.close()
+    </script>
+</head>
+
+<body>
+
+</body>
+</html>
